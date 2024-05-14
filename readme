@@ -1,0 +1,80 @@
+                                      czi
+                                      ===
+
+1)  introduction
+----------------
+
+    a simple gui tool to view and export czi (carl zeiss image) file format with 
+    multiple z-levels.
+
+    czi (https://www.zeiss.com/microscopy/en/products/software/zeiss-zen/
+    czi-image-file-format.html) files are image formats from Carl Zeiss microscopes, 
+    ZEN (https://www.zeiss.com/microscopy/en/products/software/zeiss-zen.html) 
+    imaging  software saves multidimensional images such as time lapse, z-stacks, 
+    multiposition experiments and virtual slides in this format.
+
+    this tool is written with python and tkinter for graphical user interface. the 
+    software is partly based on zeiss' libczi (https://zeiss.github.io/libczi/) 
+    library, the czifile (https://pypi.org/project/czifile) python package, and 
+    tkinter-range-slider (https://github.com/lgimberis/tkinter-range-slider).
+
+
+2)  screenshots
+---------------
+
+    v1.0 (./github/gui-1.0.0.png)
+
+
+3)  licensing
+-------------
+
+    3.1. tkinter-range-slider
+    -------------------------
+    
+    line 19:350 is based on tkinter-range-slider, with a 2-clause bsd license
+    Copyright (c) 2020, Mengxun Li
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice, this
+       list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright notice,
+       this list of conditions and the following disclaimer in the documentation
+       and/or other materials provided with the distribution.
+
+    3.2. libczi
+    -----------
+
+    libczi is licensed with GPLv3 and LGPLv3
+    Copyright (c) 2017-2022 Carl Zeiss Microscopy GmbH
+
+    3.3. czifile
+    ------------
+
+    czifile is licensed with a 3-clause bsd license
+    Copyright (c) 2013-2019, Christoph Gohlke
+    Copyright (c) 2013-2019, The Regents of the University of California
+    Produced at the Laboratory for Fluorescence Dynamics.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+    3.4. this file
+    --------------
+
+    other part of the file is licensed by gplv3.
