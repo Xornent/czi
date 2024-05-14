@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import ttk, font
 from tkinter import filedialog as fd
+from tkinter import colorchooser as colorchooser
 import ctypes
 
 import czifile
@@ -10,7 +11,7 @@ from xml.dom.minidom import parseString
 import xml.dom.minidom
 
 import numpy as npy
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
 ScaleFactor=ctypes.windll.shcore.GetScaleFactorForDevice(0)
@@ -507,6 +508,8 @@ Copyright (C) Z. Yang 2023""",
         self.resizable(False, False)
         self.eval('tk::PlaceWindow . center')
         self.mainloop()
+
+        self.channeldata = []
         pass
 
     def open_file(self):
@@ -541,14 +544,16 @@ Copyright (C) Z. Yang 2023""",
             self.merge_z_to.config(state = DISABLED, to = 1)
         
         for ctrlg in self.control_list:
-            lbl, slider, canvas, check, _ = ctrlg
+            lbl, slider, canvas, check, _, txt = ctrlg
             lbl.destroy()
             slider.destroy()
             canvas.destroy()
             check.destroy()
+            txt.destroy()
         
         self.control_list = []
         self.channel_colors = []
+
         # initialize the channel selector
         for cid in range(c):
             DOMTree = xml.dom.minidom.parseString(meta)
@@ -598,24 +603,29 @@ Copyright (C) Z. Yang 2023""",
             label_channel_name = Label(self.channel_frame, text = shortname)
             label_channel_name.grid(row = cid, column = 0)
             label_channel_name.config(bg = 'white')
+
+            txt_channel = Text(self.channel_frame, width = 10, height = 1)
+            txt_channel.grid(row = cid, column = 1)
+            txt_channel.config(bg = 'white')
             
             slider = RangeSlider(self.channel_frame, 0, 1, value_in = low, value_out = high, width = 200,
                                  command = self.update_image)
-            slider.grid(row = cid, column = 1, padx = 10)
+            slider.grid(row = cid, column = 2, padx = 10)
             slider.config(bg = 'white')
             
             canvas = Canvas(self.channel_frame, width = 15, height = 15)
-            canvas.grid(row = cid, column = 2, padx = 10)
+            canvas.grid(row = cid, column = 3, padx = 10)
             canvas.config(bg = '#' + colorString)
+            canvas.bind("<Button-1>", lambda event: self.canvas_colorpick(event))
             
             is_layer_visible = BooleanVar()
             is_layer_visible.set(visible)
             check = Checkbutton(self.channel_frame, text='', variable = is_layer_visible,
                                 command = self.update_image)
-            check.grid(row = cid, column = 3, padx = 0)
+            check.grid(row = cid, column = 4, padx = 0)
             check.config(bg = 'white')
             
-            self.control_list += [(label_channel_name, slider, canvas, check, is_layer_visible)]
+            self.control_list += [(label_channel_name, slider, canvas, check, is_layer_visible, txt_channel)]
             pass
 
         self.update_z(None)
@@ -636,12 +646,17 @@ Copyright (C) Z. Yang 2023""",
         pass
 
     def save_file(self):
+        self.update_image()
         fn = fd.asksaveasfilename(initialfile = 'export.png',
                                   defaultextension = '.png',
                                   filetypes = [('PNG file', '*.png'),
                                                ('JPEG file', '*.jpg'),
                                                ('Tagged image file format', '*.tiff')])
         self.image.save(fn)
+
+        for cid in range(len(self.channeldata)):
+            imc = Image.fromarray(npy.uint8( self.channeldata[cid] * 255 ))
+            imc.save(fn.replace('.png', '.' + str(cid) + '.tiff'))
         pass
     
     def update_merged(self, event = None):
@@ -744,9 +759,10 @@ Copyright (C) Z. Yang 2023""",
             mergenp[mergenp > 1] = 1
             mergenp[mergenp < 0] = 0
 
+        self.channeldata = []
         for cid in range(c):
             
-            _, slider, _, _, is_layer_visible = self.control_list[cid]
+            _, slider, _, _, is_layer_visible, _ = self.control_list[cid]
             low, high = slider.get_in_and_out()
             visible = is_layer_visible.get()
 
@@ -767,15 +783,25 @@ Copyright (C) Z. Yang 2023""",
                 rgb[:,:,0] += (cr / 255) * linear
                 rgb[:,:,1] += (cg / 255) * linear
                 rgb[:,:,2] += (cb / 255) * linear
+                self.channeldata += [mergenp[cid,:,:]]
         
         rgb[rgb > 1] = 1
         rgb[rgb < 0] = 0
         self.image = Image.fromarray(npy.uint8(rgb * 255))
         resized_image = self.image.resize((800, 800))
 
+        d = ImageDraw.Draw(self.image)
+        fnt = ImageFont.truetype('arialbd.ttf', 64)
+        col = 0
+        for cid in range(c):
+            _, slider, _, _, is_layer_visible, txt = self.control_list[cid]
+            if is_layer_visible.get():
+                d.text((50, 50 + 80 * col), txt.get('1.0','1.end'), '#' + self.channel_colors[cid][3], fnt)
+                col += 1
+            else: continue
+
         self.tkimage = ImageTk.PhotoImage(resized_image)
         self.canvas.create_image(0, 0, anchor = NW, image = self.tkimage)
-
         pass
 
     def update_image(self):
@@ -787,9 +813,10 @@ Copyright (C) Z. Yang 2023""",
         c, _, y, x = self.np.shape
         rgb = npy.zeros((y, x, 3))
 
+        self.channeldata = []
         for cid in range(c):
             
-            _, slider, _, _, is_layer_visible = self.control_list[cid]
+            _, slider, _, _, is_layer_visible, txt = self.control_list[cid]
             low, high = slider.get_in_and_out()
             visible = is_layer_visible.get()
 
@@ -810,9 +837,20 @@ Copyright (C) Z. Yang 2023""",
                 rgb[:,:,0] += (cr / 255) * linear
                 rgb[:,:,1] += (cg / 255) * linear
                 rgb[:,:,2] += (cb / 255) * linear
+                self.channeldata += [self.np[cid,z,:,:]]
             
         self.image = Image.fromarray(npy.uint8(rgb * 255))
         resized_image = self.image.resize((800, 800))
+
+        d = ImageDraw.Draw(self.image)
+        fnt = ImageFont.truetype('harding.otf', 64)
+        col = 0
+        for cid in range(c):
+            _, slider, _, _, is_layer_visible, txt = self.control_list[cid]
+            if is_layer_visible.get():
+                d.text((50, 50 + 80 * col), txt.get('1.0','1.end'), '#' + self.channel_colors[cid][3], fnt)
+                col += 1
+            else: continue
 
         self.tkimage = ImageTk.PhotoImage(resized_image)
         self.canvas.create_image(0, 0, anchor = NW, image = self.tkimage)
@@ -843,6 +881,22 @@ Copyright (C) Z. Yang 2023""",
             hist_poly = self.canvas_histogram.create_polygon(*points, fill = '#' + ccolor)
             channel += 1
         
+        self.update_image()
+        pass
+
+    def canvas_colorpick(self, event):
+        widg = event.widget
+        targetid = 0
+        for i in range(len(self.control_list)):
+            label_channel_name, slider, canvas, check, is_layer_visible, _ = self.control_list[i]
+            if canvas == widg:
+                targetid = i
+                break
+
+        tup, color_string = colorchooser.askcolor(color = None)
+        self.channel_colors[targetid] = (tup[0], tup[1], tup[2], color_string[1:7])
+        label_channel_name, slider, canvas, check, is_layer_visible, _ = self.control_list[targetid]
+        canvas.config(bg = color_string)
         self.update_image()
         pass
 
